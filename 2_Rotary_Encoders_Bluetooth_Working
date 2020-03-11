@@ -1,3 +1,8 @@
+ /*********************************************************************
+ This is an example of two rotary encoders sending a HID multiple keypress over bluetooth. 
+ I am using it to control the volume of diferent sources in the same PC via Voicemeeter and Macro buttons.
+ *********************************************************************/
+      
       /*********************************************************************
  This is an example for our nRF51822 based Bluefruit LE modules
 
@@ -89,7 +94,8 @@ hid_keyboard_report_t keyReport = { 0, 0, { 0 } };
 hid_keyboard_report_t previousReport = { 0, 0, { 1 } };
 
 // Pin A, Pin B, Button Pin
-SimpleRotary rotary(6,5,9);
+SimpleRotary rotary1(2,3,9);
+SimpleRotary rotary2(5,6,10);
 
 
 /**************************************************************************/
@@ -163,28 +169,57 @@ void setup(void)
 void loop(void)
 {
   byte i;
-  // 0 = not turning, 1 = CW, 2 = CCW
-  i = rotary.rotate();
+  i = rotary1.rotate();
+
+ byte f;
+ f = rotary2.rotate(); 
+  
+ 
   if ( ble.isConnected() )
   {
+    
+    //Rotary encoder 1 // 0 = not turning, 1 = CW, 2 = CCW
     if ( i == 1 || i == 2) 
     {
       if ( i == 2 ) 
       {
-        Serial.print("Left");
+        Serial.println("Left");
         keyReport.modifier = KEY_MOD_LCTRL;
-        keyReport.keycode[5] = HID_KEY_DELETE;
+        keyReport.keycode[4] = HID_KEY_DELETE;
       }
       else if ( i == 1 ) 
       {
-        Serial.print("Right");
+        Serial.println("Right");
         keyReport.modifier = KEY_MOD_LCTRL;
-        keyReport.keycode[5] = HID_KEY_INSERT;
+        keyReport.keycode[4] = HID_KEY_INSERT;
+      }
+    } else {
+      keyReport.modifier = 0;
+      keyReport.keycode[4] = 0;
+    }//Rotary encoder 1 end
+    
+    sendKeyReport();
+    
+    //Rotary encoder 2 // 0 = not turning, 1 = CW, 2 = CCW
+     if ( f == 1 || f == 2) 
+    {
+      if ( f == 2 ) 
+      {
+        Serial.println("Left");
+        keyReport.modifier = KEY_MOD_LCTRL;
+        keyReport.keycode[5] = HID_KEY_END;
+      }
+      else if ( f == 1 ) 
+      {
+        Serial.println("Right");
+        keyReport.modifier = KEY_MOD_LCTRL;
+        keyReport.keycode[5] = HID_KEY_HOME;
       }
     } else {
       keyReport.modifier = 0;
       keyReport.keycode[5] = 0;
-    }
+    }//Rotary encoder 2 end
+    
      sendKeyReport();
 
     } 
@@ -201,10 +236,12 @@ void sendKeyReport() {
         // copy to previousReport
         memcpy(&previousReport, &keyReport, 8);
       }
-
+      
+      if (keyReport.keycode[4] != 0) {
+        ble.atcommand("AT+BLEKEYBOARDCODE", (uint8_t*) &keyReport, 8);
+      }
+      
       if (keyReport.keycode[5] != 0) {
-        //testing to see if this is what is slowing down my rotary encoder
-        // Send keyboard report
         ble.atcommand("AT+BLEKEYBOARDCODE", (uint8_t*) &keyReport, 8);
       }
 }
